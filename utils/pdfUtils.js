@@ -1,5 +1,7 @@
 import fs from "fs";
-import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
+import path from "path";
+import { PDFDocument, rgb } from "pdf-lib";
+import * as fontkit from "fontkit";
 
 export const signPdfWithImage = async ({
   pdfPath,
@@ -14,32 +16,49 @@ export const signPdfWithImage = async ({
 }) => {
   const pdfBytes = fs.readFileSync(pdfPath);
   const pdfDoc = await PDFDocument.load(pdfBytes);
+  pdfDoc.registerFontkit(fontkit); // 👈 обов’язково для кастомного шрифту
 
   const pngImage = await pdfDoc.embedPng(imageBase64);
   const pages = pdfDoc.getPages();
   const targetPage = pages[page];
 
+  const originalWidth = pngImage.width;
+  const originalHeight = pngImage.height;
+
+  const maxWidth = 120;
+  const scale = maxWidth / originalWidth;
+  const scaledHeight = originalHeight * scale;
+
+  const pageHeight = targetPage.getHeight();
+  const adjustedY = pageHeight - y - scaledHeight;
+
   targetPage.drawImage(pngImage, {
     x,
-    y,
-    width: 150,
-    height: 50,
+    y: adjustedY,
+    width: maxWidth,
+    height: scaledHeight,
   });
 
-  if (label) {
-    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  if (label && labelX !== undefined && labelY !== undefined) {
+    const fontPath = path.resolve(
+      "assets/fonts/Open_Sans/OpenSans-SemiBold.ttf"
+    );
+    const fontBytes = fs.readFileSync(fontPath);
+    const customFont = await pdfDoc.embedFont(fontBytes);
+
+    const fontSize = 12;
+    const adjustedLabelY = pageHeight - labelY - fontSize;
+
     targetPage.drawText(label, {
       x: labelX,
-      y: labelY,
-      size: 12,
-      font,
+      y: adjustedLabelY,
+      size: fontSize,
+      font: customFont,
       color: rgb(0, 0, 0),
     });
   }
 
   const signedPdfBytes = await pdfDoc.save();
   fs.writeFileSync(outputPath, signedPdfBytes);
-
-  // Optional: remove uploaded original
   fs.unlinkSync(pdfPath);
 };

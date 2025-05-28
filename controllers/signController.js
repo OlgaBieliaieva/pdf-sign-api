@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { signPdfWithImage } from "../utils/pdfUtils.js";
+import scheduleFileDeletion from "../utils/scheduleFileDeletion.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -31,7 +32,7 @@ export const signPdf = async (req, res) => {
     await signPdfWithImage({
       pdfPath: req.file.path,
       imageBase64,
-      page: parseInt(page),
+      page: parseInt(page - 1),
       x: parseFloat(x),
       y: parseFloat(y),
       label: label || "",
@@ -39,6 +40,9 @@ export const signPdf = async (req, res) => {
       labelY: parseFloat(labelY || y + 60),
       outputPath,
     });
+
+    // Запускаємо відкладене видалення файлу через 1 годину (3600000 мс)
+    scheduleFileDeletion(outputPath, 3600000);
 
     res.download(outputPath, outputFilename);
   } catch (err) {
