@@ -9,7 +9,17 @@ const __dirname = path.dirname(__filename);
 
 export const signPdf = async (req, res) => {
   try {
-    const { x, y, page, imageBase64, label, labelX, labelY } = req.body;
+    const {
+      x,
+      y,
+      page,
+      imageBase64,
+      canvasWidth,
+      canvasHeight,
+      label,
+      labelX,
+      labelY,
+    } = req.body;
 
     if (!x || !y || !imageBase64 || page === undefined) {
       return res.status(400).json({ error: "Missing required fields" });
@@ -39,6 +49,8 @@ export const signPdf = async (req, res) => {
       labelX: parseFloat(labelX || x), // fallback to signature coords
       labelY: parseFloat(labelY || y + 60),
       outputPath,
+      canvasWidth: parseFloat(canvasWidth),
+      canvasHeight: parseFloat(canvasHeight),
     });
 
     // Запускаємо відкладене видалення файлу через 1 годину (3600000 мс)
